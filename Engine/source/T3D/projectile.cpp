@@ -51,6 +51,10 @@
 #include "T3D/decal/decalData.h"
 #include "T3D/lightDescription.h"
 #include "console/engineAPI.h"
+// added by Yuri
+#include "math/mTransform.h"
+#include "player.h"
+// end added
 
 
 IMPLEMENT_CO_DATABLOCK_V1(ProjectileData);
@@ -1083,6 +1087,54 @@ void Projectile::simulate( F32 dt )
    if ( mDataBlock->isBallistic )
       mCurrVelocity.z -= 9.81 * mDataBlock->gravityMod * dt;
 
+   // added by Yuri
+   if (isServerObject() && (mCurrPosition == mInitialPosition))
+   {
+	   // this is a player?
+	   if (strcmp(mSourceObject->getClassName(), "Player") == 0)
+	   {
+		   Player *player = (Player*)mSourceObject.getObject();
+		   if (player)
+		   {
+			   float projectileSpread = 0.0f;
+
+			   if (player->IsJumping())
+				   projectileSpread = 1.0f;
+			   else // player is running
+				   projectileSpread = mSourceObject->getVelocity().len() / player->getMaxHorizSpeed();
+
+			   if (projectileSpread > 0.0f)
+			   {
+				   // for projectile spread we must create random transform matrix for rotate velocity vector
+
+				   EulerF angles;
+
+				   // generate random euler angles from range [-pi/2; pi/2]
+				   angles.x = gRandGen.randF(-0.5f, 0.5f) * 3.14159265 * projectileSpread;
+				   angles.y = gRandGen.randF(-0.5f, 0.5f) * 3.14159265 * projectileSpread;
+				   angles.z = gRandGen.randF(-0.5f, 0.5f) * 3.14159265 * projectileSpread;
+
+				   QuatF q(angles);
+				   // get rotate axis and angle
+				   AngAxisF aa(q);
+
+				   TransformF trans(mCurrVelocity, aa);
+
+				   // transform matrix
+				   MatrixF mtrx = trans.getMatrix();
+
+				   // rotate velocity
+				   mtrx.mulV( mCurrVelocity );
+
+				   // update client-side velocity in next packet
+				   setMaskBits(VelocityMask);
+			   }
+		   }
+	   }
+   }
+   // end added by Yuri
+
+
    newPosition = oldPosition + mCurrVelocity * dt;
 
    // disable the source objects collision reponse for a short time while we
@@ -1329,6 +1381,14 @@ U32 Projectile::packUpdate( NetConnection *con, U32 mask, BitStream *stream )
       mathWrite(*stream, mCurrVelocity);
    }
 
+   // added by Yuri
+   // VelocityMask
+   if (stream->writeFlag(mask & VelocityMask))
+   {
+	   mathWrite(*stream, mCurrVelocity);
+   }
+   // end added
+
    return retMask;
 }
 
@@ -1379,6 +1439,15 @@ void Projectile::unpackUpdate(NetConnection* con, BitStream* stream)
       mCurrPosition = pos;
       setPosition( mCurrPosition );
    }
+
+   // added by Yuri
+   if (stream->readFlag()) // VelocityMask
+   {
+	   Point3F velocity;
+	   mathRead(*stream, &velocity);
+	   setVelocity(velocity);
+   }
+   // end added
 }
 
 //--------------------------------------------------------------------------

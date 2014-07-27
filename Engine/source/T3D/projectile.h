@@ -168,7 +168,8 @@ public:
    enum UpdateMasks {
       BounceMask    = Parent::NextFreeMask,
       ExplosionMask = Parent::NextFreeMask << 1,
-      NextFreeMask  = Parent::NextFreeMask << 2
+	  VelocityMask = Parent::NextFreeMask << 2,		// flag for update velocity
+      NextFreeMask  = Parent::NextFreeMask << 3
    };
 
    

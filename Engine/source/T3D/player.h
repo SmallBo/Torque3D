@@ -764,6 +764,18 @@ public:
    virtual void prepRenderImage( SceneRenderState* state );
    virtual void renderConvex( ObjectRenderInst *ri, SceneRenderState *state, BaseMatInstance *overrideMat );   
    virtual void renderMountedImage( U32 imageSlot, TSRenderState &rstate, SceneRenderState *state );
+
+   // added by Yuri
+   F32 getMaxHorizSpeed() const
+   {
+	   return mDataBlock->horizMaxSpeed;
+   }
+
+   bool IsJumping() const
+   {
+	   return mDataBlock->isJumpAction(mActionAnimation.action);
+   }
+   // end added
 };
 
 typedef Player::Pose PlayerPose;
